@@ -1,0 +1,24 @@
+{
+  "name": "aura-ecommerce-management-system",
+  "version": "1.0.0",
+  "description": "Full-Stack Minimalist E-Commerce Management System built with React, Node.js, Express, and MongoDB",
+  "scripts": {
+    "client": "npm --prefix client run dev",
+    "server": "npm --prefix server start",
+    "build": "npm --prefix client run build",
+    "seed": "npm --prefix server run seed",
+    "test:backend": "node server/test_verification.js"
+  },
+  "keywords": [
+    "ecommerce",
+    "react",
+    "vite",
+    "express",
+    "mongodb",
+    "mongoose",
+    "jwt",
+    "minimalist"
+  ],
+  "author": "AURA Studio",
+  "license": "MIT"
+}
