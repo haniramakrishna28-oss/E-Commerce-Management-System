@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ArrowRight, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { cleanImageUrl, getFallbackImage } from '../utils/imageHelpers';
 import './Cart.css';
 
 const Cart = () => {
@@ -43,7 +44,16 @@ const Cart = () => {
             {cartItems.map(({ product, qty }) => (
               <div key={product._id} className="cart-item-card">
                 <Link to={`/products/${product._id}`}>
-                  <img src={product.image} alt={product.name} className="cart-item-img" />
+                  <img
+                    src={cleanImageUrl(product.image) || getFallbackImage(product.category)}
+                    alt={product.name}
+                    className="cart-item-img"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = getFallbackImage(product.category);
+                    }}
+                  />
                 </Link>
 
                 <div className="cart-item-info">

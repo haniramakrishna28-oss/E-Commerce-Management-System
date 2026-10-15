@@ -3,6 +3,32 @@ import Product from '../models/Product.js';
 import { memoryStore } from '../config/store.js';
 import { getIsMongooseConnected } from '../config/db.js';
 
+const CATEGORY_FALLBACKS = {
+  'Audio': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80',
+  'Desk Setup': 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=800&q=80',
+  'Wearables': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80',
+  'Photography': 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80',
+  'Home Living': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80',
+};
+
+const cleanServerImageUrl = (raw, cat) => {
+  if (!raw || typeof raw !== 'string') return CATEGORY_FALLBACKS[cat] || CATEGORY_FALLBACKS['Audio'];
+  const str = raw.trim();
+  if (str.startsWith('data:image/') || str.startsWith('blob:')) return str;
+  try {
+    const parsed = new URL(str);
+    if (parsed.searchParams.has('imgurl')) {
+      const extracted = parsed.searchParams.get('imgurl');
+      if (extracted) return decodeURIComponent(extracted);
+    }
+    if (parsed.searchParams.has('mediaurl')) {
+      const extracted = parsed.searchParams.get('mediaurl');
+      if (extracted) return decodeURIComponent(extracted);
+    }
+  } catch (e) {}
+  return str;
+};
+
 // @desc    Fetch all products with search, category filter, price filter, sorting & pagination
 // @route   GET /api/products
 // @access  Public
@@ -135,13 +161,14 @@ export const createProduct = async (req, res) => {
     }
 
     const userId = req.user?._id || '65f1a0010000000000000001';
+    const finalImage = cleanServerImageUrl(image, category);
 
     if (getIsMongooseConnected()) {
       const product = new Product({
         name,
         price: Number(price),
         user: userId,
-        image: image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+        image: finalImage,
         category,
         countInStock: Number(countInStock) || 0,
         featured: !!featured,
@@ -158,7 +185,7 @@ export const createProduct = async (req, res) => {
         name,
         price: Number(price),
         user: userId,
-        image: image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+        image: finalImage,
         category,
         countInStock: Number(countInStock) || 0,
         featured: !!featured,
@@ -196,11 +223,14 @@ export const updateProduct = async (req, res) => {
       }
 
       if (product) {
+        const targetCategory = category ?? product.category;
         product.name = name ?? product.name;
         product.price = price !== undefined ? Number(price) : product.price;
         product.description = description ?? product.description;
-        product.image = image ?? product.image;
-        product.category = category ?? product.category;
+        if (image !== undefined) {
+          product.image = cleanServerImageUrl(image, targetCategory);
+        }
+        product.category = targetCategory;
         product.countInStock = countInStock !== undefined ? Number(countInStock) : product.countInStock;
         product.featured = featured !== undefined ? featured : product.featured;
 
@@ -212,13 +242,14 @@ export const updateProduct = async (req, res) => {
     const idx = memoryStore.products.findIndex(p => p._id === id || p.id === id);
     if (idx !== -1) {
       const p = memoryStore.products[idx];
+      const targetCategory = category ?? p.category;
       memoryStore.products[idx] = {
         ...p,
         name: name ?? p.name,
         price: price !== undefined ? Number(price) : p.price,
         description: description ?? p.description,
-        image: image ?? p.image,
-        category: category ?? p.category,
+        image: image !== undefined ? cleanServerImageUrl(image, targetCategory) : p.image,
+        category: targetCategory,
         countInStock: countInStock !== undefined ? Number(countInStock) : p.countInStock,
         featured: featured !== undefined ? featured : p.featured,
       };

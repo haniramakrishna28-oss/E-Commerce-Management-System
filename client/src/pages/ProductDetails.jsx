@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { productsAPI } from '../services/api';
 import { getStoredProductById, updateStoredProduct } from '../services/productStorage';
+import { cleanImageUrl, getFallbackImage } from '../utils/imageHelpers';
 import './ProductDetails.css';
 
 const ProductDetails = () => {
@@ -124,10 +125,15 @@ const ProductDetails = () => {
           {/* Gallery / Image Showcase */}
           <div className="details-image-card">
             <img
-              src={product.image}
+              src={cleanImageUrl(product.image) || getFallbackImage(product.category)}
               alt={product.name}
               className="details-image"
               fetchPriority="high"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = getFallbackImage(product.category);
+              }}
             />
           </div>
 

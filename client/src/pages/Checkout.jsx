@@ -4,6 +4,7 @@ import { ShieldCheck, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { ordersAPI } from '../services/api';
+import { cleanImageUrl, getFallbackImage } from '../utils/imageHelpers';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -298,7 +299,15 @@ const Checkout = () => {
             <div style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: 'var(--space-4)' }}>
               {cartItems.map(({ product, qty }) => (
                 <div key={product._id} className="checkout-item-preview">
-                  <img src={product.image} alt={product.name} />
+                  <img
+                    src={cleanImageUrl(product.image) || getFallbackImage(product.category)}
+                    alt={product.name}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = getFallbackImage(product.category);
+                    }}
+                  />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{product.name}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Qty: {qty}</div>

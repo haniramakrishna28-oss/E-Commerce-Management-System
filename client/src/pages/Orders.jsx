@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Package, Clock, ArrowRight, CheckCircle2, Truck, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ordersAPI } from '../services/api';
+import { cleanImageUrl, getFallbackImage } from '../utils/imageHelpers';
 
 const Orders = () => {
   const { user, token } = useAuth();
@@ -128,9 +129,14 @@ const Orders = () => {
               {order.orderItems?.map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                   <img
-                    src={item.image || item.product?.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100'}
+                    src={cleanImageUrl(item.image || item.product?.image) || getFallbackImage(item.category || item.product?.category)}
                     alt={item.name || item.product?.name}
+                    referrerPolicy="no-referrer"
                     style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = getFallbackImage(item.category || item.product?.category);
+                    }}
                   />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.name || item.product?.name}</div>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Star, ShoppingBag, Heart, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { cleanImageUrl, getFallbackImage } from '../utils/imageHelpers';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
@@ -33,13 +34,14 @@ const ProductCard = ({ product }) => {
     <div className="product-card">
       <Link to={`/products/${prodId}`} className="product-card-image-wrapper">
         <img
-          src={product.image}
+          src={cleanImageUrl(product.image) || getFallbackImage(product.category)}
           alt={product.name}
           className="product-card-image"
           loading="lazy"
+          referrerPolicy="no-referrer"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
+            e.target.src = getFallbackImage(product.category);
           }}
         />
         <button
