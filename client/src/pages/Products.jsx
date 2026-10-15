@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal, X, ArrowLeft, ArrowRight, PackageSearch } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { mockProducts, mockCategories } from '../services/mockData';
+import { mockCategories } from '../services/mockData';
 import { productsAPI } from '../services/api';
+import { getStoredProducts, saveStoredProducts } from '../services/productStorage';
 import './Products.css';
 
 const ITEMS_PER_PAGE = 6;
@@ -13,13 +14,22 @@ const Products = () => {
   const urlCategory = searchParams.get('category') || 'all';
   const urlSearch = searchParams.get('search') || '';
 
-  const [productsList, setProductsList] = useState(mockProducts);
+  const [productsList, setProductsList] = useState(() => getStoredProducts());
   const [selectedCategory, setSelectedCategory] = useState(urlCategory);
   const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [priceRange, setPriceRange] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
+
+  // Sync state if products are saved/updated in Admin or another tab
+  useEffect(() => {
+    const handleSync = () => {
+      setProductsList(getStoredProducts());
+    };
+    window.addEventListener('aura_products_updated', handleSync);
+    return () => window.removeEventListener('aura_products_updated', handleSync);
+  }, []);
 
   // Fetch products from backend API on mount
   useEffect(() => {
@@ -28,10 +38,14 @@ const Products = () => {
         setLoading(true);
         const data = await productsAPI.getAll();
         if (data && data.products && data.products.length > 0) {
+          saveStoredProducts(data.products);
           setProductsList(data.products);
+        } else {
+          setProductsList(getStoredProducts());
         }
       } catch (err) {
         console.warn('Backend not responding, displaying fallback catalog:', err.message);
+        setProductsList(getStoredProducts());
       } finally {
         setLoading(false);
       }

@@ -11,6 +11,30 @@ export const protect = async (req, res, next) => {
   ) {
     try {
       token = req.headers.authorization.split(' ')[1];
+
+      // Support development and demo tokens
+      if (token === 'mock-jwt-admin-token') {
+        const adminUser = memoryStore.users.find(u => u.isAdmin) || {
+          _id: '65f1a0010000000000000001',
+          name: 'Alexander Admin',
+          email: 'admin@aura.store',
+          isAdmin: true,
+        };
+        req.user = adminUser;
+        return next();
+      }
+
+      if (token === 'mock-jwt-customer-token' || token?.startsWith('mock-jwt-')) {
+        const custUser = memoryStore.users.find(u => !u.isAdmin) || {
+          _id: '65f1a0010000000000000002',
+          name: 'Elena Rostova',
+          email: 'customer@aura.store',
+          isAdmin: false,
+        };
+        req.user = custUser;
+        return next();
+      }
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'aura_super_secure_jwt_secret_key_2026');
 
       // Check DB or memoryStore

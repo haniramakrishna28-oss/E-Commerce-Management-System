@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Product from '../models/Product.js';
 import { memoryStore } from '../config/store.js';
 import { getIsMongooseConnected } from '../config/db.js';
@@ -91,6 +92,7 @@ export const getProducts = async (req, res) => {
 };
 
 // @desc    Fetch single product by ID
+// @desc    Fetch single product by ID
 // @route   GET /api/products/:id
 // @access  Public
 export const getProductById = async (req, res) => {
@@ -98,15 +100,21 @@ export const getProductById = async (req, res) => {
     const { id } = req.params;
 
     if (getIsMongooseConnected()) {
-      const product = await Product.findById(id);
+      let product = null;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        product = await Product.findById(id);
+      }
+      if (!product) {
+        product = await Product.findOne({ $or: [{ _id: id }, { id: id }] }).catch(() => null);
+      }
       if (product) {
         return res.json(product);
       }
-    } else {
-      const product = memoryStore.products.find(p => p._id === id || p.id === id);
-      if (product) {
-        return res.json(product);
-      }
+    }
+
+    const product = memoryStore.products.find(p => p._id === id || p.id === id);
+    if (product) {
+      return res.json(product);
     }
 
     return res.status(404).json({ message: 'Product not found' });
@@ -120,22 +128,24 @@ export const getProductById = async (req, res) => {
 // @access  Private/Admin
 export const createProduct = async (req, res) => {
   try {
-    const { name, price, description, image, category, countInStock, featured, details } = req.body;
+    const { name, price, description = '', image, category, countInStock, featured, details } = req.body;
 
-    if (!name || !price || !category || !description) {
-      return res.status(400).json({ message: 'Please provide name, price, category, and description' });
+    if (!name || price === undefined || price === null || !category) {
+      return res.status(400).json({ message: 'Please provide name, price, and category' });
     }
+
+    const userId = req.user?._id || '65f1a0010000000000000001';
 
     if (getIsMongooseConnected()) {
       const product = new Product({
         name,
         price: Number(price),
-        user: req.user._id,
+        user: userId,
         image: image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
         category,
         countInStock: Number(countInStock) || 0,
         featured: !!featured,
-        description,
+        description: description || '',
         details: Array.isArray(details) ? details : [],
       });
 
@@ -144,14 +154,15 @@ export const createProduct = async (req, res) => {
     } else {
       const newProduct = {
         _id: 'prod-' + Date.now(),
+        id: 'prod-' + Date.now(),
         name,
         price: Number(price),
-        user: req.user._id,
+        user: userId,
         image: image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
         category,
         countInStock: Number(countInStock) || 0,
         featured: !!featured,
-        description,
+        description: description || '',
         rating: 5.0,
         reviewsCount: 0,
         details: Array.isArray(details) ? details : [],
@@ -176,27 +187,30 @@ export const updateProduct = async (req, res) => {
     const { name, price, description, image, category, countInStock, featured } = req.body;
 
     if (getIsMongooseConnected()) {
-      const product = await Product.findById(id);
+      let product = null;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        product = await Product.findById(id);
+      }
       if (!product) {
-        return res.status(404).json({ message: 'Product not found' });
+        product = await Product.findOne({ $or: [{ _id: id }, { id: id }] }).catch(() => null);
       }
 
-      product.name = name ?? product.name;
-      product.price = price !== undefined ? Number(price) : product.price;
-      product.description = description ?? product.description;
-      product.image = image ?? product.image;
-      product.category = category ?? product.category;
-      product.countInStock = countInStock !== undefined ? Number(countInStock) : product.countInStock;
-      product.featured = featured !== undefined ? featured : product.featured;
+      if (product) {
+        product.name = name ?? product.name;
+        product.price = price !== undefined ? Number(price) : product.price;
+        product.description = description ?? product.description;
+        product.image = image ?? product.image;
+        product.category = category ?? product.category;
+        product.countInStock = countInStock !== undefined ? Number(countInStock) : product.countInStock;
+        product.featured = featured !== undefined ? featured : product.featured;
 
-      const updatedProduct = await product.save();
-      return res.json(updatedProduct);
-    } else {
-      const idx = memoryStore.products.findIndex(p => p._id === id || p.id === id);
-      if (idx === -1) {
-        return res.status(404).json({ message: 'Product not found' });
+        const updatedProduct = await product.save();
+        return res.json(updatedProduct);
       }
+    }
 
+    const idx = memoryStore.products.findIndex(p => p._id === id || p.id === id);
+    if (idx !== -1) {
       const p = memoryStore.products[idx];
       memoryStore.products[idx] = {
         ...p,
@@ -211,6 +225,8 @@ export const updateProduct = async (req, res) => {
 
       return res.json(memoryStore.products[idx]);
     }
+
+    return res.status(404).json({ message: 'Product not found' });
   } catch (error) {
     res.status(500).json({ message: 'Error updating product', error: error.message });
   }
@@ -224,22 +240,27 @@ export const deleteProduct = async (req, res) => {
     const { id } = req.params;
 
     if (getIsMongooseConnected()) {
-      const product = await Product.findById(id);
+      let product = null;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        product = await Product.findById(id);
+      }
       if (!product) {
-        return res.status(404).json({ message: 'Product not found' });
+        product = await Product.findOne({ $or: [{ _id: id }, { id: id }] }).catch(() => null);
       }
 
-      await product.deleteOne();
-      return res.json({ message: 'Product deleted successfully' });
-    } else {
-      const idx = memoryStore.products.findIndex(p => p._id === id || p.id === id);
-      if (idx === -1) {
-        return res.status(404).json({ message: 'Product not found' });
+      if (product) {
+        await product.deleteOne();
+        return res.json({ message: 'Product deleted successfully' });
       }
+    }
 
+    const idx = memoryStore.products.findIndex(p => p._id === id || p.id === id);
+    if (idx !== -1) {
       memoryStore.products.splice(idx, 1);
       return res.json({ message: 'Product deleted successfully' });
     }
+
+    return res.status(404).json({ message: 'Product not found' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting product', error: error.message });
   }

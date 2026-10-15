@@ -10,7 +10,8 @@ const ProductCard = ({ product }) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [added, setAdded] = useState(false);
 
-  const isFavorited = isInWishlist(product._id);
+  const prodId = product._id || product.id;
+  const isFavorited = isInWishlist(prodId);
   const isOutOfStock = product.countInStock <= 0;
 
   const handleAddToCart = (e) => {
@@ -30,12 +31,16 @@ const ProductCard = ({ product }) => {
 
   return (
     <div className="product-card">
-      <Link to={`/products/${product._id}`} className="product-card-image-wrapper">
+      <Link to={`/products/${prodId}`} className="product-card-image-wrapper">
         <img
           src={product.image}
           alt={product.name}
           className="product-card-image"
           loading="lazy"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
+          }}
         />
         <button
           className={`product-wishlist-btn ${isFavorited ? 'active' : ''}`}
@@ -56,7 +61,7 @@ const ProductCard = ({ product }) => {
 
       <div className="product-card-body">
         <div className="product-card-category">{product.category}</div>
-        <Link to={`/products/${product._id}`}>
+        <Link to={`/products/${prodId}`}>
           <h3 className="product-card-title">{product.name}</h3>
         </Link>
 

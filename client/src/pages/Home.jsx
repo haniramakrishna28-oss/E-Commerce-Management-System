@@ -1,12 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Truck, RotateCcw, Sparkles } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { mockProducts } from '../services/mockData';
+import { productsAPI } from '../services/api';
+import { getStoredProducts, saveStoredProducts } from '../services/productStorage';
 import './Home.css';
 
 const Home = () => {
-  const featuredProducts = mockProducts.filter(p => p.featured);
+  const [products, setProducts] = useState(() => getStoredProducts());
+
+  useEffect(() => {
+    const handleSync = () => {
+      setProducts(getStoredProducts());
+    };
+    window.addEventListener('aura_products_updated', handleSync);
+    return () => window.removeEventListener('aura_products_updated', handleSync);
+  }, []);
+
+  useEffect(() => {
+    const fetchHomeProducts = async () => {
+      try {
+        const data = await productsAPI.getAll();
+        if (data && data.products && data.products.length > 0) {
+          saveStoredProducts(data.products);
+          setProducts(data.products);
+        }
+      } catch (err) {
+        // Fallback already loaded
+      }
+    };
+    fetchHomeProducts();
+  }, []);
+
+  const featuredProducts = products.filter(p => p.featured);
 
   return (
     <div className="home-page">
@@ -100,13 +126,13 @@ const Home = () => {
             <h2 className="section-title">Featured Products</h2>
           </div>
           <Link to="/products" className="btn btn-outline btn-sm">
-            View All ({mockProducts.length}) <ArrowRight size={14} />
+            View All ({products.length}) <ArrowRight size={14} />
           </Link>
         </div>
 
         <div className="products-grid">
           {featuredProducts.map(product => (
-            <ProductCard key={product._id} product={product} />
+            <ProductCard key={product._id || product.id} product={product} />
           ))}
         </div>
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, Minus, Plus, ShoppingBag, Heart, ArrowLeft, Check, CheckCircle2, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
-import { mockProducts } from '../services/mockData';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { productsAPI } from '../services/api';
+import { getStoredProductById, updateStoredProduct } from '../services/productStorage';
 import './ProductDetails.css';
 
 const ProductDetails = () => {
@@ -20,11 +21,27 @@ const ProductDetails = () => {
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
-    const found = mockProducts.find(p => p._id === id);
+    // 1. Instant load from local storage
+    const found = getStoredProductById(id);
     if (found) {
       setProduct(found);
       setReviews(found.reviews || []);
     }
+
+    // 2. Refresh from API if online
+    const fetchApiProduct = async () => {
+      try {
+        const apiProd = await productsAPI.getById(id);
+        if (apiProd) {
+          setProduct(apiProd);
+          setReviews(apiProd.reviews || []);
+        }
+      } catch (e) {
+        // Fallback already active
+      }
+    };
+    fetchApiProduct();
+
     setQuantity(1);
     window.scrollTo(0, 0);
   }, [id]);
@@ -43,7 +60,7 @@ const ProductDetails = () => {
     );
   }
 
-  const isFavorited = isInWishlist(product._id);
+  const isFavorited = isInWishlist(product._id || product.id);
   const isOutOfStock = product.countInStock <= 0;
 
   const handleQuantityChange = (delta) => {
@@ -62,7 +79,7 @@ const ProductDetails = () => {
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const handleAddReview = (e) => {
+  const handleAddReview = async (e) => {
     e.preventDefault();
     if (!newReviewText.trim()) return;
 
@@ -74,8 +91,18 @@ const ProductDetails = () => {
       date: new Date().toISOString().split('T')[0],
     };
 
-    setReviews([newRev, ...reviews]);
+    const updatedReviews = [newRev, ...reviews];
+    setReviews(updatedReviews);
     setNewReviewText('');
+
+    const prodId = product._id || product.id;
+    updateStoredProduct(prodId, { reviews: updatedReviews, reviewsCount: updatedReviews.length });
+
+    try {
+      await productsAPI.addReview(prodId, { rating: newReviewRating, comment: newRev.comment });
+    } catch (err) {
+      console.warn('API review sync offline, saved locally');
+    }
   };
 
   return (
