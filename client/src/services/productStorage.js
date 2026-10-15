@@ -1,4 +1,5 @@
 import { mockProducts } from './mockData';
+import { cleanImageUrl, getFallbackImage } from '../utils/imageHelpers';
 
 const STORAGE_KEY = 'aura_products';
 
@@ -44,15 +45,19 @@ export const getStoredProductById = (id) => {
 export const addStoredProduct = (productData) => {
   const products = getStoredProducts();
   const id = 'prod-' + Date.now();
+  const category = productData.category || 'Audio';
+  const cleanedImage = cleanImageUrl(productData.image);
+  const fallback = getFallbackImage(category);
+
   const newProduct = {
     _id: id,
     id: id,
     name: productData.name,
-    category: productData.category || 'Audio',
+    category: category,
     price: Number(productData.price) || 0,
     countInStock: Math.max(0, Number(productData.countInStock) || 0),
     description: productData.description || '',
-    image: productData.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+    image: cleanedImage || fallback,
     featured: Boolean(productData.featured),
     rating: 5.0,
     reviewsCount: 0,
@@ -74,9 +79,17 @@ export const updateStoredProduct = (id, fields) => {
   const products = getStoredProducts();
   const updated = products.map((p) => {
     if ((p._id || p.id) === id || String(p._id) === String(id) || String(p.id) === String(id)) {
+      const targetCategory = fields.category || p.category;
+      let finalImg = p.image;
+      if (fields.image !== undefined) {
+        const cleaned = cleanImageUrl(fields.image);
+        finalImg = cleaned || getFallbackImage(targetCategory);
+      }
       return {
         ...p,
         ...fields,
+        category: targetCategory,
+        image: finalImg,
         price: fields.price !== undefined ? Number(fields.price) : p.price,
         countInStock:
           fields.countInStock !== undefined

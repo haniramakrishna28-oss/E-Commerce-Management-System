@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, DollarSign, ShoppingCart, Users, Plus, Edit, Trash2, Check, Search, Filter, AlertCircle, X } from 'lucide-react';
+import {
+  Package,
+  DollarSign,
+  ShoppingCart,
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Check,
+  Search,
+  Filter,
+  AlertCircle,
+  X,
+  Upload,
+  Image as ImageIcon,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { productsAPI, ordersAPI, analyticsAPI } from '../services/api';
 import {
@@ -10,6 +27,13 @@ import {
   updateStoredProduct,
   deleteStoredProduct,
 } from '../services/productStorage';
+import {
+  cleanImageUrl,
+  isLikelyWebpageUrl,
+  readFileAsDataURL,
+  getFallbackImage,
+  CATEGORY_DEFAULT_IMAGES,
+} from '../utils/imageHelpers';
 import './Admin.css';
 
 const Admin = () => {
@@ -31,17 +55,19 @@ const Admin = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [imageWarning, setImageWarning] = useState('');
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   // Modal / Form state for Add/Edit product
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productForm, setProductForm] = useState({
     name: '',
-    category: 'Audio',
+    category: 'Desk Setup',
     price: '',
     countInStock: '10',
     description: '',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+    image: getFallbackImage('Desk Setup'),
     featured: false,
   });
 
@@ -125,13 +151,15 @@ const Admin = () => {
   const handleOpenAddModal = () => {
     setEditingProduct(null);
     setModalError('');
+    setImageWarning('');
+    setImageLoadError(false);
     setProductForm({
       name: '',
-      category: 'Audio',
+      category: 'Desk Setup',
       price: '',
       countInStock: '10',
       description: '',
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+      image: getFallbackImage('Desk Setup'),
       featured: false,
     });
     setShowProductModal(true);
@@ -140,13 +168,17 @@ const Admin = () => {
   const handleOpenEditModal = (product) => {
     setEditingProduct(product);
     setModalError('');
+    setImageWarning('');
+    setImageLoadError(false);
+    const cat = product.category || 'Desk Setup';
+    const cleanedImg = cleanImageUrl(product.image);
     setProductForm({
       name: product.name || '',
-      category: product.category || 'Audio',
+      category: cat,
       price: product.price !== undefined ? product.price : '',
       countInStock: product.countInStock !== undefined ? product.countInStock : '0',
       description: product.description || '',
-      image: product.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+      image: cleanedImg || getFallbackImage(cat),
       featured: !!product.featured,
     });
     setShowProductModal(true);
@@ -170,15 +202,16 @@ const Admin = () => {
 
     const cleanPrice = Number(productForm.price);
     const cleanStock = Math.max(0, Number(productForm.countInStock) || 0);
-    const fallbackImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
+    const cleanedImg = cleanImageUrl(productForm.image);
+    const fallbackImage = getFallbackImage(productForm.category);
 
     const payload = {
       name: productForm.name.trim(),
-      category: productForm.category || 'Audio',
+      category: productForm.category || 'Desk Setup',
       price: cleanPrice,
       countInStock: cleanStock,
       description: productForm.description?.trim() || '',
-      image: productForm.image?.trim() || fallbackImage,
+      image: cleanedImg || fallbackImage,
       featured: Boolean(productForm.featured),
     };
 
@@ -379,12 +412,13 @@ const Admin = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <img
-                            src={prod.image}
+                            src={cleanImageUrl(prod.image) || getFallbackImage(prod.category)}
                             alt={prod.name}
+                            referrerPolicy="no-referrer"
                             style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
+                              e.target.src = getFallbackImage(prod.category);
                             }}
                           />
                           <span style={{ fontWeight: 600 }}>{prod.name}</span>
@@ -587,7 +621,19 @@ const Admin = () => {
                     <label className="form-label">Category</label>
                     <select
                       value={productForm.category}
-                      onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                      onChange={(e) => {
+                        const newCat = e.target.value;
+                        const isDefaultOrEmpty =
+                          !productForm.image ||
+                          Object.values(CATEGORY_DEFAULT_IMAGES).includes(productForm.image);
+                        setProductForm({
+                          ...productForm,
+                          category: newCat,
+                          image: isDefaultOrEmpty ? getFallbackImage(newCat) : productForm.image,
+                        });
+                        setImageLoadError(false);
+                        setImageWarning('');
+                      }}
                     >
                       <option value="Audio">Audio</option>
                       <option value="Wearables">Wearables</option>
@@ -637,14 +683,155 @@ const Admin = () => {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Image URL</label>
+                <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>Product Image</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '3px 8px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => {
+                          const sample = getFallbackImage(productForm.category);
+                          setProductForm(prev => ({ ...prev, image: sample }));
+                          setImageWarning('');
+                          setImageLoadError(false);
+                        }}
+                      >
+                        <Sparkles size={12} />
+                        Use {productForm.category} Preset
+                      </button>
+
+                      <label
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '3px 10px', height: 'auto', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Upload size={12} />
+                        Upload File
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const dataUrl = await readFileAsDataURL(file);
+                              setProductForm(prev => ({ ...prev, image: dataUrl }));
+                              setImageWarning('');
+                              setImageLoadError(false);
+                            } catch (err) {
+                              setModalError(err.message);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
                   <input
-                    type="url"
+                    type="text"
                     value={productForm.image}
-                    onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                    placeholder="https://..."
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const cleaned = cleanImageUrl(val);
+                      if (cleaned !== val) {
+                        setImageWarning('Direct image address extracted from Google link!');
+                      } else if (isLikelyWebpageUrl(val)) {
+                        setImageWarning('⚠️ It looks like you copied a webpage address instead of an image. In Google Images, right-click the image and choose "Copy image address", or click "Upload File" above.');
+                      } else {
+                        setImageWarning('');
+                      }
+                      setProductForm(prev => ({ ...prev, image: cleaned }));
+                      setImageLoadError(false);
+                    }}
+                    placeholder="Paste image address (e.g. right-click on Google -> 'Copy image address')"
                   />
+
+                  {/* Warning / Notification message */}
+                  {imageWarning && (
+                    <div
+                      style={{
+                        marginTop: '6px',
+                        fontSize: '0.8rem',
+                        color: imageWarning.startsWith('⚠️') ? '#b45309' : '#059669',
+                        background: imageWarning.startsWith('⚠️') ? '#fef3c7' : '#ecfdf5',
+                        padding: '6px 10px',
+                        borderRadius: '4px',
+                        border: `1px solid ${imageWarning.startsWith('⚠️') ? '#fde68a' : '#a7f3d0'}`,
+                      }}
+                    >
+                      {imageWarning}
+                    </div>
+                  )}
+
+                  {/* Live Image Preview Box */}
+                  <div
+                    style={{
+                      marginTop: '10px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1px dashed #cbd5e1',
+                      background: '#f8fafc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        background: '#e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        border: '1px solid #cbd5e1',
+                      }}
+                    >
+                      {productForm.image ? (
+                        <img
+                          src={productForm.image}
+                          alt="Preview"
+                          referrerPolicy="no-referrer"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onLoad={() => setImageLoadError(false)}
+                          onError={() => setImageLoadError(true)}
+                        />
+                      ) : (
+                        <ImageIcon size={22} style={{ color: '#94a3b8' }} />
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1, fontSize: '0.82rem' }}>
+                      <div style={{ fontWeight: 600, marginBottom: '2px' }}>
+                        {imageLoadError ? (
+                          <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <AlertCircle size={14} /> Image Failed to Load
+                          </span>
+                        ) : productForm.image ? (
+                          <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={14} /> Image Preview Ready
+                          </span>
+                        ) : (
+                          <span style={{ color: '#64748b' }}>No image selected</span>
+                        )}
+                      </div>
+
+                      <div style={{ color: '#64748b', lineHeight: '1.3' }}>
+                        {imageLoadError ? (
+                          <span>
+                            Did you click <em>"Copy link address"</em> in Google? Please right-click the image and select <strong>"Copy image address"</strong>, or click <strong>Upload File</strong>.
+                          </span>
+                        ) : (
+                          <span>Right-click any image in Google & choose <strong>"Copy image address"</strong>, or upload a photo directly from your device.</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="form-group">
