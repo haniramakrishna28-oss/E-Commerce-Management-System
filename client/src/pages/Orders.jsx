@@ -11,11 +11,17 @@ const Orders = () => {
 
   useEffect(() => {
     const fetchOrders = async () => {
+      if (!user) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         if (token) {
           const apiOrders = await ordersAPI.getMyOrders();
-          if (Array.isArray(apiOrders) && apiOrders.length > 0) {
+          if (Array.isArray(apiOrders)) {
             setOrders(apiOrders);
             return;
           }
@@ -26,17 +32,24 @@ const Orders = () => {
         setLoading(false);
       }
 
-      // Fallback to local storage
+      // Fallback to local storage for offline / mock mode
       try {
         const saved = JSON.parse(localStorage.getItem('aura_orders') || '[]');
-        setOrders(saved);
+        const filtered = user?.isAdmin
+          ? saved
+          : saved.filter(
+              o =>
+                (o.shippingAddress?.email && o.shippingAddress.email.toLowerCase() === user.email?.toLowerCase()) ||
+                o.user === user._id
+            );
+        setOrders(filtered);
       } catch {
         setOrders([]);
       }
     };
 
     fetchOrders();
-  }, [token]);
+  }, [token, user]);
 
   const getStatusBadge = (status) => {
     switch (status) {

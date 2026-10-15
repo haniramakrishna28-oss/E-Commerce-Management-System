@@ -50,6 +50,7 @@ export const registerUser = async (req, res) => {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
+        wishlist: [],
         token: generateToken(user._id),
       });
     } else {
@@ -81,6 +82,7 @@ export const registerUser = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         isAdmin: newUser.isAdmin,
+        wishlist: [],
         token: generateToken(newUser._id),
       });
     }
@@ -104,13 +106,14 @@ export const loginUser = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     if (getIsMongooseConnected()) {
-      const user = await User.findOne({ email: normalizedEmail });
+      const user = await User.findOne({ email: normalizedEmail }).populate('wishlist');
       if (user && (await user.matchPassword(password))) {
         return res.json({
           _id: user._id,
           name: user.name,
           email: user.email,
           isAdmin: user.isAdmin,
+          wishlist: user.wishlist || [],
           token: generateToken(user._id),
         });
       } else {
@@ -120,11 +123,16 @@ export const loginUser = async (req, res) => {
       // Memory Store fallback
       const user = memoryStore.users.find(u => u.email.toLowerCase() === normalizedEmail);
       if (user && bcrypt.compareSync(password, user.password)) {
+        const wishlistIds = user.wishlist || [];
+        const populated = wishlistIds
+          .map(id => memoryStore.products.find(p => p._id === id || p.id === id))
+          .filter(Boolean);
         return res.json({
           _id: user._id,
           name: user.name,
           email: user.email,
           isAdmin: user.isAdmin,
+          wishlist: populated,
           token: generateToken(user._id),
         });
       } else {
@@ -141,13 +149,33 @@ export const loginUser = async (req, res) => {
 // @route   GET /api/auth/profile
 // @access  Private
 export const getUserProfile = async (req, res) => {
-  res.json({
-    _id: req.user._id,
-    name: req.user.name,
-    email: req.user.email,
-    isAdmin: req.user.isAdmin,
-    wishlist: req.user.wishlist || [],
-  });
+  try {
+    if (getIsMongooseConnected()) {
+      const user = await User.findById(req.user._id).populate('wishlist');
+      return res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        wishlist: user.wishlist || [],
+      });
+    } else {
+      const memUser = memoryStore.users.find(u => u._id === req.user._id);
+      const wishlistIds = memUser?.wishlist || [];
+      const populated = wishlistIds
+        .map(id => memoryStore.products.find(p => p._id === id || p.id === id))
+        .filter(Boolean);
+      return res.json({
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        isAdmin: req.user.isAdmin,
+        wishlist: populated,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving profile', error: error.message });
+  }
 };
 
 // @desc    Toggle item in wishlist
@@ -155,29 +183,37 @@ export const getUserProfile = async (req, res) => {
 // @access  Private
 export const toggleWishlistItem = async (req, res) => {
   try {
-    const { productId } = req.params;
+    const productId = req.params.productId || req.body?.productId;
     const user = req.user;
+
+    if (!productId) {
+      return res.status(400).json({ message: 'Product ID is required' });
+    }
 
     if (getIsMongooseConnected()) {
       const dbUser = await User.findById(user._id);
-      const index = dbUser.wishlist.indexOf(productId);
+      const index = dbUser.wishlist.findIndex(id => id.toString() === productId.toString());
       if (index > -1) {
         dbUser.wishlist.splice(index, 1);
       } else {
         dbUser.wishlist.push(productId);
       }
       await dbUser.save();
-      return res.json({ wishlist: dbUser.wishlist });
+      const updatedUser = await User.findById(user._id).populate('wishlist');
+      return res.json({ wishlist: updatedUser.wishlist });
     } else {
       const memUser = memoryStore.users.find(u => u._id === user._id);
       if (!memUser.wishlist) memUser.wishlist = [];
-      const idx = memUser.wishlist.indexOf(productId);
+      const idx = memUser.wishlist.findIndex(id => id.toString() === productId.toString());
       if (idx > -1) {
         memUser.wishlist.splice(idx, 1);
       } else {
         memUser.wishlist.push(productId);
       }
-      return res.json({ wishlist: memUser.wishlist });
+      const populated = memUser.wishlist
+        .map(id => memoryStore.products.find(p => p._id === id || p.id === id))
+        .filter(Boolean);
+      return res.json({ wishlist: populated });
     }
   } catch (error) {
     res.status(500).json({ message: 'Error updating wishlist', error: error.message });
