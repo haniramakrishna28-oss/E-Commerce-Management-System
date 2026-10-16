@@ -1,0 +1,37 @@
+[
+  {
+    "category_id": "cat-01",
+    "name": "Audio",
+    "slug": "audio",
+    "description": "Precision acoustic instruments",
+    "product_count": 2
+  },
+  {
+    "category_id": "cat-02",
+    "name": "Wearables",
+    "slug": "wearables",
+    "description": "Minimalist smart wearables",
+    "product_count": 2
+  },
+  {
+    "category_id": "cat-03",
+    "name": "Desk Setup",
+    "slug": "desk-setup",
+    "description": "Ergonomic workspace accessories",
+    "product_count": 2
+  },
+  {
+    "category_id": "cat-04",
+    "name": "Photography",
+    "slug": "photography",
+    "description": "Optics and mirrorless gear",
+    "product_count": 1
+  },
+  {
+    "category_id": "cat-05",
+    "name": "Home Living",
+    "slug": "home-living",
+    "description": "Stoneware and architectural objects",
+    "product_count": 1
+  }
+]

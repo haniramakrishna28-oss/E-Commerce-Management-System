@@ -1,0 +1,2 @@
+Order_ID,Order_Number,Customer_ID,Customer_Name,Customer_Email,City,State,Postal_Code,Payment_Method,Subtotal_INR,Shipping_INR,Tax_INR,Total_INR,Status,Is_Paid,Created_At
+65f1c0010000000000000001,ORD-729103,65f1a0010000000000000002,Elena Rostova,customer@aura.store,Bengaluru,Karnataka,560038,card,24999,0,1999.92,26998.92,Shipped,true,2026-10-08T10:30:00.000Z

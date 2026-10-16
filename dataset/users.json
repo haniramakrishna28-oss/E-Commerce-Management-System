@@ -1,0 +1,18 @@
+[
+  {
+    "user_id": "65f1a0010000000000000001",
+    "name": "Alexander Admin",
+    "email": "admin@aura.store",
+    "role": "Admin",
+    "is_admin": true,
+    "created_at": "2026-10-16T11:48:19.866Z"
+  },
+  {
+    "user_id": "65f1a0010000000000000002",
+    "name": "Elena Rostova",
+    "email": "customer@aura.store",
+    "role": "Customer",
+    "is_admin": false,
+    "created_at": "2026-10-16T11:48:20.080Z"
+  }
+]

@@ -1,0 +1,3 @@
+User_ID,Name,Email,Role,Is_Admin,Created_At
+65f1a0010000000000000001,Alexander Admin,admin@aura.store,Admin,true,2026-10-16T11:48:19.866Z
+65f1a0010000000000000002,Elena Rostova,customer@aura.store,Customer,false,2026-10-16T11:48:20.080Z

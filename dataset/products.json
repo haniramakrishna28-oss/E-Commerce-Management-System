@@ -1,0 +1,201 @@
+[
+  {
+    "product_id": "65f1b0010000000000000001",
+    "name": "Acoustic One Wireless Headphones",
+    "category": "Audio",
+    "price_inr": 24999,
+    "count_in_stock": 15,
+    "rating": 4.8,
+    "reviews_count": 2,
+    "featured": true,
+    "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
+    "description": "Precision-engineered active noise cancellation headphones with custom neodymium 40mm drivers, 36-hour battery life, and ultra-soft memory foam ear cushions.",
+    "specifications": [
+      "Hybrid Active Noise Cancellation with transparency mode",
+      "Lossless 24-bit audio playback via USB-C or Bluetooth 5.3",
+      "Aircraft-grade lightweight aluminum frame",
+      "Fast charge: 15 minutes gives 6 hours playback"
+    ],
+    "reviews": [
+      {
+        "_id": "rev-01",
+        "userName": "Sarah Jenkins",
+        "rating": 5,
+        "comment": "Phenomenal clarity and the minimalist matte finish is stunning.",
+        "createdAt": "2026-09-15"
+      },
+      {
+        "_id": "rev-02",
+        "userName": "Marcus Vance",
+        "rating": 4.5,
+        "comment": "Best noise cancellation I have experienced yet. Extremely comfortable.",
+        "createdAt": "2026-09-28"
+      }
+    ]
+  },
+  {
+    "product_id": "65f1b0010000000000000002",
+    "name": "Chronos Minimalist Smartwatch",
+    "category": "Wearables",
+    "price_inr": 29999,
+    "count_in_stock": 8,
+    "rating": 4.9,
+    "reviews_count": 1,
+    "featured": true,
+    "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80",
+    "description": "A timeless titanium timepiece powered by an ultra-efficient AMOLED display, advanced biometrics, 7-day battery life, and sapphire crystal glass.",
+    "specifications": [
+      "Grade 5 titanium aerospace bezel with quick-release leather band",
+      "Always-on 1.4-inch LTPO OLED with 1000 nits brightness",
+      "Medical-grade heart rate, SpO2, and sleep cycle monitoring",
+      "50m water resistance (5 ATM)"
+    ],
+    "reviews": [
+      {
+        "_id": "rev-03",
+        "userName": "Alex Rivera",
+        "rating": 5,
+        "comment": "Finally a smartwatch that looks like a luxury Swiss watch. Battery lasts 6+ days easily.",
+        "createdAt": "2026-10-01"
+      }
+    ]
+  },
+  {
+    "product_id": "65f1b0010000000000000003",
+    "name": "ErgoCraft Mechanical Keyboard",
+    "category": "Desk Setup",
+    "price_inr": 14999,
+    "count_in_stock": 22,
+    "rating": 4.7,
+    "reviews_count": 1,
+    "featured": true,
+    "image_url": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80",
+    "description": "Custom gasket-mounted wireless mechanical keyboard with hot-swappable tactile switches, CNC anodized aluminum chassis, and PBT double-shot keycaps.",
+    "specifications": [
+      "Hot-swappable 5-pin PCB with south-facing RGB LEDs",
+      "Pre-lubed custom tactile switches with dampened sound profile",
+      "Tri-mode connectivity: Bluetooth 5.1, 2.4GHz wireless, USB-C",
+      "Seamless multi-device switching between Mac and Windows"
+    ],
+    "reviews": [
+      {
+        "_id": "rev-04",
+        "userName": "David Chen",
+        "rating": 5,
+        "comment": "The sound profile out of the box is incredible. Heavy, premium build.",
+        "createdAt": "2026-08-20"
+      }
+    ]
+  },
+  {
+    "product_id": "65f1b0010000000000000004",
+    "name": "Lumio Halo Studio Desk Lamp",
+    "category": "Desk Setup",
+    "price_inr": 6499,
+    "count_in_stock": 18,
+    "rating": 4.6,
+    "reviews_count": 1,
+    "featured": false,
+    "image_url": "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80",
+    "description": "Circadian-sync architectural desk lamp with touch-sensitive dimming, 98+ CRI color accuracy, wireless charging base, and dual-pivot counterbalanced arm.",
+    "specifications": [
+      "High-CRI (98+) eye-comfort diffused optical panel",
+      "Automatic ambient light sensor matching room brightness",
+      "15W Qi wireless fast charger built into weighted aluminum base",
+      "Step-less temperature control from 2700K warm to 6500K daylight"
+    ],
+    "reviews": [
+      {
+        "_id": "rev-05",
+        "userName": "Emily Watson",
+        "rating": 4,
+        "comment": "Great light for late night desk work, easy on the eyes.",
+        "createdAt": "2026-09-02"
+      }
+    ]
+  },
+  {
+    "product_id": "65f1b0010000000000000005",
+    "name": "AeroLens 35mm Prime Camera",
+    "category": "Photography",
+    "price_inr": 79999,
+    "count_in_stock": 4,
+    "rating": 4.9,
+    "reviews_count": 1,
+    "featured": true,
+    "image_url": "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&q=80",
+    "description": "Compact full-frame mirrorless street camera with fixed f/2.0 aspherical lens, retro tactile dials, and cinematic film simulation profiles.",
+    "specifications": [
+      "40.2 MP X-Trans CMOS sensor with 5-axis in-body image stabilization",
+      "Hybrid optical/electronic viewfinder with 3.69M dots",
+      "Machined brass shutter button and milled control dials",
+      "Internal ND filter and 4K/60p 10-bit video capture"
+    ],
+    "reviews": [
+      {
+        "_id": "rev-06",
+        "userName": "Liam Thorne",
+        "rating": 5,
+        "comment": "The image quality and colors straight out of camera are unbeatable.",
+        "createdAt": "2026-09-11"
+      }
+    ]
+  },
+  {
+    "product_id": "65f1b0010000000000000006",
+    "name": "Pulse Pro Wireless ANC Earbuds",
+    "category": "Audio",
+    "price_inr": 12999,
+    "count_in_stock": 25,
+    "rating": 4.5,
+    "reviews_count": 0,
+    "featured": false,
+    "image_url": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&q=80",
+    "description": "Pocket-sized audiophile true wireless earbuds with spatial audio tracking, custom 11mm ceramic drivers, and 30 hours total battery case.",
+    "specifications": [
+      "Adaptive active noise cancellation with wind protection mesh",
+      "IP54 dust and splash resistant rating",
+      "Seamless multi-point Bluetooth pairing",
+      "Qi wireless and USB-C fast charging case"
+    ],
+    "reviews": []
+  },
+  {
+    "product_id": "65f1b0010000000000000007",
+    "name": "Horizon Matte Ceramic Vessel",
+    "category": "Home Living",
+    "price_inr": 2499,
+    "count_in_stock": 12,
+    "rating": 4.7,
+    "reviews_count": 0,
+    "featured": false,
+    "image_url": "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=800&q=80",
+    "description": "Handcrafted stoneware vase with architectural geometric silhouettes and an unglazed stone-textured exterior. Designed for minimal floral arrangements.",
+    "specifications": [
+      "Hand-thrown high-fire stoneware ceramic",
+      "Matte natural textured stone finish",
+      "Waterproof glazed interior reservoir",
+      "Dimensions: 22cm height, 12cm diameter"
+    ],
+    "reviews": []
+  },
+  {
+    "product_id": "65f1b0010000000000000008",
+    "name": "Vanguard Titanium Fitness Band",
+    "category": "Wearables",
+    "price_inr": 11999,
+    "count_in_stock": 30,
+    "rating": 4.6,
+    "reviews_count": 0,
+    "featured": false,
+    "image_url": "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=800&q=80",
+    "description": "Screenless health tracker bracelet focused on sleep, recovery, and strain metrics with haptic wake alarms and water-resistant woven strap.",
+    "specifications": [
+      "Continuous skin temperature and HRV monitoring",
+      "Ultralight 22g build with titanium clasp",
+      "Zero screen distractions - syncs seamlessly to companion app",
+      "5-day battery life with slide-on charging pack"
+    ],
+    "reviews": []
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "order_id": "65f1c0010000000000000001",
+    "order_number": "ORD-729103",
+    "customer_id": "65f1a0010000000000000002",
+    "customer_name": "Elena Rostova",
+    "customer_email": "customer@aura.store",
+    "customer_city": "Bengaluru",
+    "customer_state": "Karnataka",
+    "customer_postal_code": "560038",
+    "payment_method": "card",
+    "subtotal_inr": 24999,
+    "shipping_inr": 0,
+    "tax_inr": 1999.92,
+    "total_inr": 26998.92,
+    "status": "Shipped",
+    "is_paid": true,
+    "created_at": "2026-10-08T10:30:00.000Z",
+    "items": [
+      {
+        "product": "65f1b0010000000000000001",
+        "name": "Acoustic One Wireless Headphones",
+        "qty": 1,
+        "price": 24999,
+        "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80"
+      }
+    ]
+  }
+]

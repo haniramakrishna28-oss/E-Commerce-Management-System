@@ -7,7 +7,8 @@
     "server": "npm --prefix server start",
     "build": "npm --prefix client run build",
     "seed": "npm --prefix server run seed",
-    "test:backend": "node server/test_verification.js"
+    "test:backend": "node server/test_verification.js",
+    "export:dataset": "node server/generate_dataset.js"
   },
   "keywords": [
     "ecommerce",

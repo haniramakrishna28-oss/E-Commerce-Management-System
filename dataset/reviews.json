@@ -1,0 +1,56 @@
+[
+  {
+    "review_id": "rev-01",
+    "product_id": "65f1b0010000000000000001",
+    "product_name": "Acoustic One Wireless Headphones",
+    "user_name": "Sarah Jenkins",
+    "rating": 5,
+    "comment": "Phenomenal clarity and the minimalist matte finish is stunning.",
+    "created_at": "2026-09-15"
+  },
+  {
+    "review_id": "rev-02",
+    "product_id": "65f1b0010000000000000001",
+    "product_name": "Acoustic One Wireless Headphones",
+    "user_name": "Marcus Vance",
+    "rating": 4.5,
+    "comment": "Best noise cancellation I have experienced yet. Extremely comfortable.",
+    "created_at": "2026-09-28"
+  },
+  {
+    "review_id": "rev-03",
+    "product_id": "65f1b0010000000000000002",
+    "product_name": "Chronos Minimalist Smartwatch",
+    "user_name": "Alex Rivera",
+    "rating": 5,
+    "comment": "Finally a smartwatch that looks like a luxury Swiss watch. Battery lasts 6+ days easily.",
+    "created_at": "2026-10-01"
+  },
+  {
+    "review_id": "rev-04",
+    "product_id": "65f1b0010000000000000003",
+    "product_name": "ErgoCraft Mechanical Keyboard",
+    "user_name": "David Chen",
+    "rating": 5,
+    "comment": "The sound profile out of the box is incredible. Heavy, premium build.",
+    "created_at": "2026-08-20"
+  },
+  {
+    "review_id": "rev-05",
+    "product_id": "65f1b0010000000000000004",
+    "product_name": "Lumio Halo Studio Desk Lamp",
+    "user_name": "Emily Watson",
+    "rating": 4,
+    "comment": "Great light for late night desk work, easy on the eyes.",
+    "created_at": "2026-09-02"
+  },
+  {
+    "review_id": "rev-06",
+    "product_id": "65f1b0010000000000000005",
+    "product_name": "AeroLens 35mm Prime Camera",
+    "user_name": "Liam Thorne",
+    "rating": 5,
+    "comment": "The image quality and colors straight out of camera are unbeatable.",
+    "created_at": "2026-09-11"
+  }
+]

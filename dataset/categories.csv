@@ -1,0 +1,6 @@
+Category_ID,Category_Name,Slug,Description,Product_Count
+cat-01,Audio,audio,Precision acoustic instruments,2
+cat-02,Wearables,wearables,Minimalist smart wearables,2
+cat-03,Desk Setup,desk-setup,Ergonomic workspace accessories,2
+cat-04,Photography,photography,Optics and mirrorless gear,1
+cat-05,Home Living,home-living,Stoneware and architectural objects,1
