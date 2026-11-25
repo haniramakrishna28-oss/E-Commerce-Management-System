@@ -4,7 +4,6 @@ import { Star, Minus, Plus, ShoppingBag, Heart, ArrowLeft, Check, CheckCircle2, 
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { productsAPI } from '../services/api';
-import { getStoredProductById, updateStoredProduct } from '../services/productStorage';
 import { cleanImageUrl, getFallbackImage } from '../utils/imageHelpers';
 import './ProductDetails.css';
 
@@ -15,30 +14,29 @@ const ProductDetails = () => {
   const { toggleWishlist, isInWishlist } = useWishlist();
 
   const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [newReviewText, setNewReviewText] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(5);
   const [reviews, setReviews] = useState([]);
+  const [reviewError, setReviewError] = useState('');
 
   useEffect(() => {
-    // 1. Instant load from local storage
-    const found = getStoredProductById(id);
-    if (found) {
-      setProduct(found);
-      setReviews(found.reviews || []);
-    }
-
-    // 2. Refresh from API if online
     const fetchApiProduct = async () => {
       try {
+        setLoading(true);
+        setError('');
         const apiProd = await productsAPI.getById(id);
-        if (apiProd) {
-          setProduct(apiProd);
-          setReviews(apiProd.reviews || []);
-        }
-      } catch (e) {
-        // Fallback already active
+        setProduct(apiProd);
+        setReviews(apiProd?.reviews || []);
+      } catch (err) {
+        setProduct(null);
+        setReviews([]);
+        setError(err.message || 'Product not found');
+      } finally {
+        setLoading(false);
       }
     };
     fetchApiProduct();
@@ -47,12 +45,21 @@ const ProductDetails = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
+  if (loading) {
+    return (
+      <div className="container page-wrapper" style={{ textAlign: 'center', padding: 'var(--space-16) 0' }}>
+        <div className="loading-spinner"></div>
+        <p style={{ marginTop: 'var(--space-4)', color: 'var(--text-secondary)' }}>Loading product...</p>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="container page-wrapper">
         <div className="state-container">
           <h2 className="state-title">Product not found</h2>
-          <p className="state-desc">The item you are looking for may have been removed or does not exist.</p>
+          <p className="state-desc">{error || 'The item you are looking for may have been removed or does not exist.'}</p>
           <Link to="/products" className="btn btn-primary">
             Back to Catalog
           </Link>
@@ -83,26 +90,20 @@ const ProductDetails = () => {
   const handleAddReview = async (e) => {
     e.preventDefault();
     if (!newReviewText.trim()) return;
-
-    const newRev = {
-      id: 'rev-' + Date.now(),
-      userName: 'Verified Buyer',
-      rating: Number(newReviewRating),
-      comment: newReviewText.trim(),
-      date: new Date().toISOString().split('T')[0],
-    };
-
-    const updatedReviews = [newRev, ...reviews];
-    setReviews(updatedReviews);
-    setNewReviewText('');
+    setReviewError('');
 
     const prodId = product._id || product.id;
-    updateStoredProduct(prodId, { reviews: updatedReviews, reviewsCount: updatedReviews.length });
-
     try {
-      await productsAPI.addReview(prodId, { rating: newReviewRating, comment: newRev.comment });
+      const res = await productsAPI.addReview(prodId, {
+        rating: Number(newReviewRating),
+        comment: newReviewText.trim(),
+      });
+      if (Array.isArray(res?.reviews)) {
+        setReviews(res.reviews);
+      }
+      setNewReviewText('');
     } catch (err) {
-      console.warn('API review sync offline, saved locally');
+      setReviewError(err.message || 'Please sign in to submit a review.');
     }
   };
 
@@ -260,6 +261,11 @@ const ProductDetails = () => {
               Write a Review
             </h3>
             <form onSubmit={handleAddReview}>
+              {reviewError && (
+                <div className="alert-error" style={{ marginBottom: 'var(--space-3)' }}>
+                  <span>{reviewError}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 'var(--space-4)', marginBottom: 'var(--space-3)', alignItems: 'center' }}>
                 <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Rating:</label>
                 <select
@@ -295,10 +301,12 @@ const ProductDetails = () => {
           <div className="reviews-list">
             {reviews.length > 0 ? (
               reviews.map(rev => (
-                <div key={rev.id} className="review-item">
+                <div key={rev._id || rev.id} className="review-item">
                   <div className="review-meta">
                     <span className="review-author">{rev.userName}</span>
-                    <span className="review-date">{rev.date}</span>
+                    <span className="review-date">
+                      {rev.date || (rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : '')}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: '2px', color: '#f59e0b', marginBottom: 'var(--space-2)' }}>
                     {Array.from({ length: 5 }).map((_, i) => (

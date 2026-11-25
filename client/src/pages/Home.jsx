@@ -3,30 +3,21 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Truck, RotateCcw, Sparkles } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { productsAPI } from '../services/api';
-import { getStoredProducts, saveStoredProducts } from '../services/productStorage';
 import './Home.css';
 
 const Home = () => {
-  const [products, setProducts] = useState(() => getStoredProducts());
-
-  useEffect(() => {
-    const handleSync = () => {
-      setProducts(getStoredProducts());
-    };
-    window.addEventListener('aura_products_updated', handleSync);
-    return () => window.removeEventListener('aura_products_updated', handleSync);
-  }, []);
+  const [products, setProducts] = useState([]);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const fetchHomeProducts = async () => {
       try {
-        const data = await productsAPI.getAll();
-        if (data && data.products && data.products.length > 0) {
-          saveStoredProducts(data.products);
-          setProducts(data.products);
-        }
+        setLoadError('');
+        const data = await productsAPI.getAll({ limit: 100 });
+        setProducts(Array.isArray(data?.products) ? data.products : []);
       } catch (err) {
-        // Fallback already loaded
+        setProducts([]);
+        setLoadError(err.message || 'Unable to load products from server.');
       }
     };
     fetchHomeProducts();
@@ -129,6 +120,12 @@ const Home = () => {
             View All ({products.length}) <ArrowRight size={14} />
           </Link>
         </div>
+
+        {loadError && (
+          <div className="alert-error" style={{ marginBottom: 'var(--space-6)' }}>
+            <span>{loadError}</span>
+          </div>
+        )}
 
         <div className="products-grid">
           {featuredProducts.map(product => (

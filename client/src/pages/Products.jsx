@@ -4,7 +4,6 @@ import { SlidersHorizontal, X, ArrowLeft, ArrowRight, PackageSearch } from 'luci
 import ProductCard from '../components/ProductCard';
 import { mockCategories } from '../services/mockData';
 import { productsAPI } from '../services/api';
-import { getStoredProducts, saveStoredProducts } from '../services/productStorage';
 import './Products.css';
 
 const ITEMS_PER_PAGE = 6;
@@ -14,38 +13,26 @@ const Products = () => {
   const urlCategory = searchParams.get('category') || 'all';
   const urlSearch = searchParams.get('search') || '';
 
-  const [productsList, setProductsList] = useState(() => getStoredProducts());
+  const [productsList, setProductsList] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(urlCategory);
   const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [priceRange, setPriceRange] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-
-  // Sync state if products are saved/updated in Admin or another tab
-  useEffect(() => {
-    const handleSync = () => {
-      setProductsList(getStoredProducts());
-    };
-    window.addEventListener('aura_products_updated', handleSync);
-    return () => window.removeEventListener('aura_products_updated', handleSync);
-  }, []);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Fetch products from backend API on mount
   useEffect(() => {
     const fetchApiProducts = async () => {
       try {
         setLoading(true);
-        const data = await productsAPI.getAll();
-        if (data && data.products && data.products.length > 0) {
-          saveStoredProducts(data.products);
-          setProductsList(data.products);
-        } else {
-          setProductsList(getStoredProducts());
-        }
+        setError('');
+        const data = await productsAPI.getAll({ limit: 100 });
+        setProductsList(Array.isArray(data?.products) ? data.products : []);
       } catch (err) {
-        console.warn('Backend not responding, displaying fallback catalog:', err.message);
-        setProductsList(getStoredProducts());
+        setProductsList([]);
+        setError(err.message || 'Unable to load products from server.');
       } finally {
         setLoading(false);
       }
@@ -208,11 +195,15 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Loading Spinner or Grid */}
+        {/* Loading Spinner, Error, or Grid */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-16) 0' }}>
             <div className="loading-spinner"></div>
             <p style={{ marginTop: 'var(--space-4)', color: 'var(--text-secondary)' }}>Loading catalog...</p>
+          </div>
+        ) : error ? (
+          <div className="alert-error" style={{ marginBottom: 'var(--space-6)' }}>
+            <span>{error}</span>
           </div>
         ) : paginatedProducts.length > 0 ? (
           <div className="products-grid">
