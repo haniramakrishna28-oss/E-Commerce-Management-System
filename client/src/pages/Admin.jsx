@@ -21,13 +21,6 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { productsAPI, ordersAPI, analyticsAPI } from '../services/api';
 import {
-  getStoredProducts,
-  saveStoredProducts,
-  addStoredProduct,
-  updateStoredProduct,
-  deleteStoredProduct,
-} from '../services/productStorage';
-import {
   cleanImageUrl,
   isLikelyWebpageUrl,
   readFileAsDataURL,
@@ -41,7 +34,7 @@ const Admin = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('products');
-  const [productsList, setProductsList] = useState(() => getStoredProducts());
+  const [productsList, setProductsList] = useState([]);
   const [ordersList, setOrdersList] = useState([]);
   const [metrics, setMetrics] = useState({
     totalProducts: 0,
@@ -77,24 +70,12 @@ const Admin = () => {
 
   const loadData = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
-      // 1. Load Products (Instant local load first)
-      const cached = getStoredProducts();
-      setProductsList(cached);
-      let prods = cached;
+      const prodRes = await productsAPI.getAll({ limit: 100 });
+      const prods = Array.isArray(prodRes?.products) ? prodRes.products : [];
+      setProductsList(prods);
 
-      try {
-        const prodRes = await productsAPI.getAll({ limit: 100 });
-        if (prodRes?.products && prodRes.products.length > 0) {
-          prods = prodRes.products;
-          saveStoredProducts(prods);
-          setProductsList(prods);
-        }
-      } catch (err) {
-        console.warn('Backend API offline, keeping local product catalog');
-      }
-
-      // 2. Load Orders
       let orders = [];
       try {
         const orderRes = await ordersAPI.getAll();
@@ -103,31 +84,26 @@ const Admin = () => {
           setOrdersList(orders);
         }
       } catch (e) {
-        const localOrders = JSON.parse(localStorage.getItem('aura_orders') || '[]');
-        orders = localOrders;
-        setOrdersList(localOrders);
+        setOrdersList([]);
       }
 
-      // 3. Load Metrics
       try {
         const metricsRes = await analyticsAPI.getDashboard();
         if (metricsRes) {
           setMetrics(metricsRes);
         }
       } catch (e) {
-        const ords = orders.length ? orders : JSON.parse(localStorage.getItem('aura_orders') || '[]');
-        const rev = ords.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+        const rev = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
         setMetrics({
           totalProducts: prods.length,
-          totalUsers: 2,
-          totalOrders: ords.length,
+          totalUsers: 0,
+          totalOrders: orders.length,
           totalRevenue: rev,
-          pendingOrders: ords.filter(o => o.status === 'Order Placed' || !o.status).length,
+          pendingOrders: orders.filter(o => o.status === 'Order Placed' || !o.status).length,
         });
       }
     } catch (err) {
-      console.warn('Admin load data error:', err.message);
-      setProductsList(getStoredProducts());
+      setErrorMsg(err.message || 'Failed to load admin catalog from server.');
     } finally {
       setLoading(false);
     }
@@ -136,17 +112,6 @@ const Admin = () => {
   useEffect(() => {
     loadData();
   }, [token]);
-
-  // Sync when products are updated in another tab or component
-  useEffect(() => {
-    const handleSync = () => {
-      const updated = getStoredProducts();
-      setProductsList(updated);
-      setMetrics(prev => ({ ...prev, totalProducts: updated.length }));
-    };
-    window.addEventListener('aura_products_updated', handleSync);
-    return () => window.removeEventListener('aura_products_updated', handleSync);
-  }, []);
 
   const handleOpenAddModal = () => {
     setEditingProduct(null);
@@ -216,32 +181,15 @@ const Admin = () => {
     };
 
     try {
-      // 1. Attempt API sync (if backend is available)
-      let apiProduct = null;
-      try {
-        if (editingProduct) {
-          const editId = editingProduct._id || editingProduct.id;
-          apiProduct = await productsAPI.update(editId, payload);
-        } else {
-          apiProduct = await productsAPI.create(payload);
-        }
-      } catch (apiErr) {
-        console.warn('Backend API save failed, synchronizing with local storage:', apiErr.message);
-      }
-
-      // 2. Sync local product cache using server document when available
       let updated;
       if (editingProduct) {
         const editId = editingProduct._id || editingProduct.id;
-        updated = updateStoredProduct(editId, apiProduct || payload);
+        const apiProduct = await productsAPI.update(editId, payload);
+        updated = productsList.map(p => ((p._id || p.id) === editId ? apiProduct : p));
         setSuccessMsg(`"${payload.name}" updated successfully!`);
-      } else if (apiProduct?._id) {
-        updated = [apiProduct, ...getStoredProducts()];
-        saveStoredProducts(updated);
-        setSuccessMsg(`"${payload.name}" added to catalog!`);
       } else {
-        addStoredProduct(payload);
-        updated = getStoredProducts();
+        const apiProduct = await productsAPI.create(payload);
+        updated = [apiProduct, ...productsList];
         setSuccessMsg(`"${payload.name}" added to catalog!`);
       }
 
@@ -265,31 +213,28 @@ const Admin = () => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         await productsAPI.delete(id);
+        const updated = productsList.filter(p => (p._id || p.id) !== id);
+        setProductsList(updated);
+        setMetrics(prev => ({
+          ...prev,
+          totalProducts: updated.length,
+        }));
+        setSuccessMsg('Product removed from catalog.');
+        setTimeout(() => setSuccessMsg(''), 3000);
       } catch (err) {
-        console.warn('Backend delete failed, removing locally:', err.message);
+        setErrorMsg(err.message || 'Failed to delete product');
       }
-
-      const updated = deleteStoredProduct(id);
-      setProductsList(updated);
-      setMetrics(prev => ({
-        ...prev,
-        totalProducts: updated.length,
-      }));
-      setSuccessMsg('Product removed from catalog.');
-      setTimeout(() => setSuccessMsg(''), 3000);
     }
   };
 
   const handleUpdateStock = async (id, newStock) => {
     const stockVal = Math.max(0, Number(newStock) || 0);
     try {
-      await productsAPI.update(id, { countInStock: stockVal });
+      const updatedProd = await productsAPI.update(id, { countInStock: stockVal });
+      setProductsList(prev => prev.map(p => ((p._id || p.id) === id ? updatedProd : p)));
     } catch (err) {
-      console.warn('Stock update API offline, updating locally:', err.message);
+      setErrorMsg(err.message || 'Failed to update stock');
     }
-
-    const updated = updateStoredProduct(id, { countInStock: stockVal });
-    setProductsList(updated);
   };
 
   const handleOrderStatusChange = async (orderId, newStatus) => {

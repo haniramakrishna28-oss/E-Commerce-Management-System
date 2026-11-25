@@ -42,39 +42,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    try {
-      const data = await authAPI.login(email, password);
-      if (!data?.token) {
-        throw new Error('Invalid login response from server');
-      }
-      setAuthSession(data);
-      return { success: true, user: data };
-    } catch (err) {
-      // Local fallback for offline demo credentials only
-      if (email === 'admin@aura.store' && password === 'Admin123!') {
-        const adminUser = {
-          _id: 'user-admin',
-          name: 'Alexander Admin',
-          email: 'admin@aura.store',
-          isAdmin: true,
-          token: 'mock-jwt-admin-token',
-        };
-        setAuthSession(adminUser);
-        return { success: true, user: adminUser };
-      }
-      if (email === 'customer@aura.store' && password === 'User123!') {
-        const regularUser = {
-          _id: 'user-customer',
-          name: 'Elena Rostova',
-          email: 'customer@aura.store',
-          isAdmin: false,
-          token: 'mock-jwt-customer-token',
-        };
-        setAuthSession(regularUser);
-        return { success: true, user: regularUser };
-      }
-      throw err;
+    const data = await authAPI.login(email, password);
+    if (!data?.token) {
+      throw new Error('Invalid login response from server');
     }
+    setAuthSession(data);
+    return { success: true, user: data };
   };
 
   const register = async (name, email, password) => {
