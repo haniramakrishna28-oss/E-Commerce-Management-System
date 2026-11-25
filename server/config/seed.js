@@ -8,6 +8,46 @@ import { memoryStore } from './store.js';
 
 dotenv.config();
 
+const sanitizeCategories = () =>
+  memoryStore.categories.map(({ _id, ...rest }) => rest);
+
+const sanitizeProducts = (adminUserId) =>
+  memoryStore.products.map(({ reviews = [], ...p }) => ({
+    ...p,
+    user: adminUserId,
+    reviews: reviews.map(({ _id, ...rev }) => rev),
+  }));
+
+export const seedIfEmpty = async () => {
+  try {
+    let adminUser = await User.findOne({ isAdmin: true });
+
+    if ((await User.countDocuments()) === 0) {
+      const createdUsers = await User.insertMany(memoryStore.users);
+      adminUser = createdUsers.find((u) => u.isAdmin) || createdUsers[0];
+      console.log(`[Seeder] Seeded ${createdUsers.length} users into MongoDB.`);
+    }
+
+    if ((await Category.countDocuments()) === 0) {
+      const createdCategories = await Category.insertMany(sanitizeCategories());
+      console.log(`[Seeder] Seeded ${createdCategories.length} categories into MongoDB.`);
+    }
+
+    if ((await Product.countDocuments()) === 0) {
+      const sampleProducts = sanitizeProducts(adminUser?._id);
+      const createdProducts = await Product.insertMany(sampleProducts);
+      console.log(`[Seeder] Seeded ${createdProducts.length} products into MongoDB.`);
+    }
+
+    if ((await Order.countDocuments()) === 0 && memoryStore.orders.length > 0) {
+      const createdOrders = await Order.insertMany(memoryStore.orders);
+      console.log(`[Seeder] Seeded ${createdOrders.length} sample orders into MongoDB.`);
+    }
+  } catch (error) {
+    console.warn(`[Seeder] Auto-seed skipped/failed: ${error.message}`);
+  }
+};
+
 export const seedDatabase = async () => {
   try {
     const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/aura_ecommerce';
@@ -20,21 +60,22 @@ export const seedDatabase = async () => {
     await User.deleteMany();
     await Category.deleteMany();
 
-    // Insert users (passwords are already hashed in memoryStore or will be hashed by Mongoose)
+    // Insert users (passwords are already hashed in memoryStore)
     const createdUsers = await User.insertMany(memoryStore.users);
     const adminUser = createdUsers[0]._id;
 
     // Insert categories
-    await Category.insertMany(memoryStore.categories);
+    await Category.insertMany(sanitizeCategories());
 
     // Insert products
-    const sampleProducts = memoryStore.products.map(p => ({
-      ...p,
-      user: adminUser,
-    }));
-    await Product.insertMany(sampleProducts);
+    await Product.insertMany(sanitizeProducts(adminUser));
 
-    console.log('[Seeder] Database seeded successfully with users, categories, and products!');
+    // Insert sample orders
+    if (memoryStore.orders.length > 0) {
+      await Order.insertMany(memoryStore.orders);
+    }
+
+    console.log('[Seeder] Database seeded successfully with users, categories, products, and orders!');
     process.exit(0);
   } catch (error) {
     console.error(`[Seeder] Error during seeding: ${error.message}`);

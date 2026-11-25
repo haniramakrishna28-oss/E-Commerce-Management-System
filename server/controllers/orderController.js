@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { memoryStore } from '../config/store.js';
@@ -34,11 +35,17 @@ export const createOrder = async (req, res) => {
     const orderNumber = generateOrderNumber();
 
     if (getIsMongooseConnected()) {
-      // 1. Verify stock availability and reduce stock
+      // 1. Verify stock availability, resolve real ObjectIds, and reduce stock
+      const resolvedOrderItems = [];
       for (const item of orderItems) {
-        const prod = await Product.findById(item.product);
+        let prod = null;
+        if (mongoose.Types.ObjectId.isValid(item.product)) {
+          prod = await Product.findById(item.product);
+        } else if (item.name) {
+          prod = await Product.findOne({ name: item.name });
+        }
         if (!prod) {
-          return res.status(404).json({ message: `Product ${item.name} not found` });
+          return res.status(404).json({ message: `Product ${item.name || item.product} not found` });
         }
         if (prod.countInStock < item.qty) {
           return res.status(400).json({
@@ -47,12 +54,16 @@ export const createOrder = async (req, res) => {
         }
         prod.countInStock -= item.qty;
         await prod.save();
+        resolvedOrderItems.push({
+          ...item,
+          product: prod._id,
+        });
       }
 
       const order = new Order({
         user: req.user._id,
         orderNumber,
-        orderItems,
+        orderItems: resolvedOrderItems,
         shippingAddress,
         paymentMethod,
         subtotal: Number(subtotal),

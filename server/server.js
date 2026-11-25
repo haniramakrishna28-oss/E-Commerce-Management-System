@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
 import { connectDB } from './config/db.js';
+import { seedIfEmpty } from './config/seed.js';
 
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -17,8 +18,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to Database
-await connectDB();
+// Connect to Database and seed initial catalog/users if collections are empty
+const dbConnected = await connectDB();
+if (dbConnected) {
+  await seedIfEmpty();
+}
 
 // Core Middleware
 const normalizeOrigin = (url) => (url ? url.trim().replace(/\/+$/, '') : '');

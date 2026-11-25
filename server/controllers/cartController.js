@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
 import { memoryStore } from '../config/store.js';
@@ -40,6 +41,9 @@ export const addToCart = async (req, res) => {
     }
 
     if (getIsMongooseConnected()) {
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return res.status(400).json({ message: 'Invalid product ID' });
+      }
       const product = await Product.findById(productId);
       if (!product) return res.status(404).json({ message: 'Product not found' });
 
