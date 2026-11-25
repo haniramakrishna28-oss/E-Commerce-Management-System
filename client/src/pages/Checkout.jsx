@@ -9,7 +9,7 @@ import './Checkout.css';
 
 const Checkout = () => {
   const { cartItems, subtotal, shipping, tax, total, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -99,8 +99,12 @@ const Checkout = () => {
       clearCart();
       setOrderSuccess(createdOrder);
     } catch (err) {
-      console.warn('API error, falling back to local order generation:', err.message);
-      // Fallback local persistence if offline
+      if (token && !token.startsWith('mock-jwt-')) {
+        setGeneralError(err.message || 'Unable to place order. Please try again.');
+        return;
+      }
+      console.warn('Guest/offline checkout, falling back to local order generation:', err.message);
+      // Fallback local persistence only when not signed in with a backend account
       const generatedOrderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
       const fallbackOrder = {
         _id: generatedOrderId,

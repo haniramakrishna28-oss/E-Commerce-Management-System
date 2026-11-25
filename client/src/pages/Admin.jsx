@@ -217,23 +217,28 @@ const Admin = () => {
 
     try {
       // 1. Attempt API sync (if backend is available)
+      let apiProduct = null;
       try {
         if (editingProduct) {
           const editId = editingProduct._id || editingProduct.id;
-          await productsAPI.update(editId, payload);
+          apiProduct = await productsAPI.update(editId, payload);
         } else {
-          await productsAPI.create(payload);
+          apiProduct = await productsAPI.create(payload);
         }
       } catch (apiErr) {
         console.warn('Backend API save failed, synchronizing with local storage:', apiErr.message);
       }
 
-      // 2. Always persist changes locally to guarantee instant and reliable saving
+      // 2. Sync local product cache using server document when available
       let updated;
       if (editingProduct) {
         const editId = editingProduct._id || editingProduct.id;
-        updated = updateStoredProduct(editId, payload);
+        updated = updateStoredProduct(editId, apiProduct || payload);
         setSuccessMsg(`"${payload.name}" updated successfully!`);
+      } else if (apiProduct?._id) {
+        updated = [apiProduct, ...getStoredProducts()];
+        saveStoredProducts(updated);
+        setSuccessMsg(`"${payload.name}" added to catalog!`);
       } else {
         addStoredProduct(payload);
         updated = getStoredProducts();

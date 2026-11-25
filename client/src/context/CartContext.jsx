@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
+import { cartAPI } from '../services/api';
 
 const CartContext = createContext();
+
+const isBackendToken = (t) => Boolean(t && !t.startsWith('mock-jwt-'));
+const isObjectId = (id) => typeof id === 'string' && /^[a-f\d]{24}$/i.test(id);
 
 const GUEST_CART_KEY = 'aura_cart_guest';
 
@@ -78,9 +82,11 @@ const cleanupLegacyCart = (activeKey) => {
 };
 
 export const CartProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const userRef = useRef(user);
   userRef.current = user;
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
 
   const prevUserRef = useRef(user);
   const activeKey = getCartKey(user);
@@ -90,51 +96,79 @@ export const CartProvider = ({ children }) => {
     return loadCartFromStorage(activeKey);
   });
 
-  // Handle user authentication transitions (Login, Logout, Switch User)
+  // Handle user authentication transitions (Login, Logout, Switch User) and backend cart sync
   useEffect(() => {
     const prevUser = prevUserRef.current;
     const prevKey = getCartKey(prevUser);
     const currentKey = getCartKey(user);
 
-    // If user state hasn't changed key, do nothing
-    if (prevKey === currentKey) {
-      return;
-    }
+    let localItemsToSync = loadCartFromStorage(currentKey);
 
-    if (!prevUser && user) {
-      // 1. Guest -> Logged In: Merge guest cart into user's account cart
-      const guestItems = loadCartFromStorage(GUEST_CART_KEY);
-      const userItems = loadCartFromStorage(currentKey);
+    if (prevKey !== currentKey) {
+      if (!prevUser && user) {
+        // 1. Guest -> Logged In: Merge guest cart into user's account cart
+        const guestItems = loadCartFromStorage(GUEST_CART_KEY);
+        const userItems = loadCartFromStorage(currentKey);
 
-      let finalItems;
-      if (guestItems.length > 0) {
-        finalItems = mergeCartItems(userItems, guestItems);
-        saveCartToStorage(currentKey, finalItems);
-        // Clear guest cart so it doesn't leak to subsequent guest sessions
+        if (guestItems.length > 0) {
+          localItemsToSync = mergeCartItems(userItems, guestItems);
+          saveCartToStorage(currentKey, localItemsToSync);
+          localStorage.removeItem(GUEST_CART_KEY);
+        } else {
+          localItemsToSync = userItems;
+        }
+
+        setCartItems(localItemsToSync);
+      } else if (prevUser && !user) {
+        // 2. Logged In -> Logout: Start with a clean, isolated guest cart
         localStorage.removeItem(GUEST_CART_KEY);
+        setCartItems([]);
       } else {
-        finalItems = userItems;
+        // 3. Account Switch (e.g., Customer -> Admin or User A -> User B)
+        localItemsToSync = loadCartFromStorage(currentKey);
+        localStorage.removeItem(GUEST_CART_KEY);
+        setCartItems(localItemsToSync);
       }
 
-      setCartItems(finalItems);
-    } else if (prevUser && !user) {
-      // 2. Logged In -> Logout: Start with a clean, isolated guest cart
-      localStorage.removeItem(GUEST_CART_KEY);
-      setCartItems([]);
-    } else {
-      // 3. Account Switch (e.g., Customer -> Admin or User A -> User B)
-      const switchedItems = loadCartFromStorage(currentKey);
-      localStorage.removeItem(GUEST_CART_KEY);
-      setCartItems(switchedItems);
+      prevUserRef.current = user;
     }
 
-    prevUserRef.current = user;
-  }, [user]);
+    if (user && isBackendToken(token)) {
+      let cancelled = false;
+      (async () => {
+        try {
+          let serverCart = await cartAPI.getCart();
+          const serverItems = sanitizeCartItems(serverCart?.items);
+
+          // Push any local items not yet in server cart
+          for (const localItem of localItemsToSync) {
+            const localId = localItem.product?._id || localItem.product?.id;
+            if (isObjectId(localId) && !serverItems.some((s) => (s.product?._id || s.product?.id) === localId)) {
+              serverCart = await cartAPI.addToCart(localId, localItem.qty);
+            }
+          }
+
+          if (!cancelled && Array.isArray(serverCart?.items)) {
+            const synced = sanitizeCartItems(serverCart.items);
+            if (synced.length > 0 || localItemsToSync.length === 0) {
+              saveCartToStorage(currentKey, synced);
+              setCartItems(synced);
+            }
+          }
+        } catch (err) {
+          console.warn('Cart API sync error:', err.message);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [user, token]);
 
   const addToCart = (product, qty = 1) => {
     if (!product) return;
+    const prodId = product._id || product.id;
     setCartItems(prev => {
-      const prodId = product._id || product.id;
       const existingIndex = prev.findIndex(
         item => (item.product._id || item.product.id) === prodId
       );
@@ -154,6 +188,12 @@ export const CartProvider = ({ children }) => {
       saveCartToStorage(key, newItems);
       return newItems;
     });
+
+    if (isBackendToken(tokenRef.current) && isObjectId(prodId)) {
+      cartAPI.addToCart(prodId, qty).catch(err => {
+        console.warn('Cart API addToCart error:', err.message);
+      });
+    }
   };
 
   const updateQty = (productId, newQty) => {
@@ -175,6 +215,12 @@ export const CartProvider = ({ children }) => {
       saveCartToStorage(key, newItems);
       return newItems;
     });
+
+    if (isBackendToken(tokenRef.current) && isObjectId(productId)) {
+      cartAPI.updateQty(productId, newQty).catch(err => {
+        console.warn('Cart API updateQty error:', err.message);
+      });
+    }
   };
 
   const removeFromCart = (productId) => {
@@ -186,12 +232,24 @@ export const CartProvider = ({ children }) => {
       saveCartToStorage(key, newItems);
       return newItems;
     });
+
+    if (isBackendToken(tokenRef.current) && isObjectId(productId)) {
+      cartAPI.removeItem(productId).catch(err => {
+        console.warn('Cart API removeItem error:', err.message);
+      });
+    }
   };
 
   const clearCart = () => {
     const key = getCartKey(userRef.current);
     saveCartToStorage(key, []);
     setCartItems([]);
+
+    if (isBackendToken(tokenRef.current)) {
+      cartAPI.clearCart().catch(err => {
+        console.warn('Cart API clearCart error:', err.message);
+      });
+    }
   };
 
   const itemCount = cartItems.reduce((acc, item) => acc + (Number(item.qty) || 0), 0);
