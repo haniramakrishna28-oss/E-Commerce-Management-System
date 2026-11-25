@@ -18,11 +18,27 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Connect to Database
-connectDB();
+await connectDB();
 
 // Core Middleware
+const normalizeOrigin = (url) => (url ? url.trim().replace(/\/+$/, '') : '');
+const envOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map(normalizeOrigin)
+  .filter(Boolean);
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'https://e-commerce-management-system-rho.vercel.app',
+  ...envOrigins,
+]);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.has(normalizeOrigin(origin))) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true,
 }));
 app.use(express.json());

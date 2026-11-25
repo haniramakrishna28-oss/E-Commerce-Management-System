@@ -5,11 +5,18 @@ let isMongooseConnected = false;
 export const connectDB = async () => {
   const mongoURI = process.env.MONGO_URI;
 
+  if (!mongoURI) {
+    isMongooseConnected = false;
+    console.warn('[Database] MONGO_URI is not set. Operating in persistent local store mode.');
+    return false;
+  }
+
   try {
-    // Attempt Mongoose connection with 3-second timeout so it doesn't hang if no local mongod
+    // Give remote Atlas clusters more time on cold start while keeping local fallback fast
+    const isRemote = mongoURI.startsWith('mongodb+srv://');
     mongoose.set('strictQuery', false);
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 3000,
+      serverSelectionTimeoutMS: isRemote ? 10000 : 3000,
     });
 
     isMongooseConnected = true;
@@ -17,10 +24,11 @@ export const connectDB = async () => {
     return true;
   } catch (error) {
     isMongooseConnected = false;
-    console.warn(`[Database] MongoDB connection at ${mongoURI} was not reachable (${error.message}).`);
+    console.warn(`[Database] MongoDB connection was not reachable (${error.message}).`);
     console.log(`[Database] Operating in persistent local store mode for zero-config execution. To connect to MongoDB Atlas, add your MONGO_URI in server/.env.`);
     return false;
   }
 };
 
-export const getIsMongooseConnected = () => isMongooseConnected;
+export const getIsMongooseConnected = () =>
+  isMongooseConnected && mongoose.connection.readyState === 1;

@@ -34,14 +34,23 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user, token]);
 
+  const setAuthSession = (userData) => {
+    localStorage.setItem('aura_user', JSON.stringify(userData));
+    localStorage.setItem('aura_token', userData.token);
+    setUser(userData);
+    setToken(userData.token);
+  };
+
   const login = async (email, password) => {
     try {
       const data = await authAPI.login(email, password);
-      setUser(data);
-      setToken(data.token);
+      if (!data?.token) {
+        throw new Error('Invalid login response from server');
+      }
+      setAuthSession(data);
       return { success: true, user: data };
     } catch (err) {
-      // Local fallback for offline mode
+      // Local fallback for offline demo credentials only
       if (email === 'admin@aura.store' && password === 'Admin123!') {
         const adminUser = {
           _id: 'user-admin',
@@ -50,8 +59,7 @@ export const AuthProvider = ({ children }) => {
           isAdmin: true,
           token: 'mock-jwt-admin-token',
         };
-        setUser(adminUser);
-        setToken(adminUser.token);
+        setAuthSession(adminUser);
         return { success: true, user: adminUser };
       }
       if (email === 'customer@aura.store' && password === 'User123!') {
@@ -62,8 +70,7 @@ export const AuthProvider = ({ children }) => {
           isAdmin: false,
           token: 'mock-jwt-customer-token',
         };
-        setUser(regularUser);
-        setToken(regularUser.token);
+        setAuthSession(regularUser);
         return { success: true, user: regularUser };
       }
       throw err;
@@ -71,24 +78,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (name, email, password) => {
-    try {
-      const data = await authAPI.register(name, email, password);
-      setUser(data);
-      setToken(data.token);
-      return { success: true, user: data };
-    } catch (err) {
-      // Offline fallback
-      const newUser = {
-        _id: 'user-' + Date.now(),
-        name,
-        email,
-        isAdmin: false,
-        token: 'mock-jwt-' + Date.now(),
-      };
-      setUser(newUser);
-      setToken(newUser.token);
-      return { success: true, user: newUser };
+    const data = await authAPI.register(name, email, password);
+    if (!data?.token || !data?._id) {
+      throw new Error('Invalid registration response from server');
     }
+    setAuthSession(data);
+    return { success: true, user: data };
   };
 
   const logout = () => {

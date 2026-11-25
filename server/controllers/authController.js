@@ -15,22 +15,22 @@ const generateToken = (id) => {
 // @access  Public
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body || {};
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
 
     // Validation
-    if (!name || !email || !password) {
+    if (!trimmedName || !normalizedEmail || typeof password !== 'string' || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
 
-    if (!/\S+@\S+\.\S+/.test(email)) {
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
       return res.status(400).json({ message: 'Please provide a valid email address' });
     }
 
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
-
-    const normalizedEmail = email.toLowerCase().trim();
 
     if (getIsMongooseConnected()) {
       const userExists = await User.findOne({ email: normalizedEmail });
@@ -39,7 +39,7 @@ export const registerUser = async (req, res) => {
       }
 
       const user = await User.create({
-        name: name.trim(),
+        name: trimmedName,
         email: normalizedEmail,
         password,
         isAdmin: false,
@@ -67,7 +67,7 @@ export const registerUser = async (req, res) => {
       const newUser = {
         _id: newUserId,
         id: newUserId,
-        name: name.trim(),
+        name: trimmedName,
         email: normalizedEmail,
         password: hashedPassword,
         isAdmin: false,
@@ -88,6 +88,13 @@ export const registerUser = async (req, res) => {
     }
   } catch (error) {
     console.error('Registration error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'User already exists with this email address' });
+    }
+    if (error.name === 'ValidationError') {
+      const message = Object.values(error.errors).map(e => e.message).join(', ');
+      return res.status(400).json({ message });
+    }
     res.status(500).json({ message: 'Server error during registration', error: error.message });
   }
 };

@@ -98,7 +98,7 @@ const Navbar = () => {
           {user ? (
             <div className="user-badge" onClick={logout} title="Click to Logout">
               <User size={16} />
-              <span>{user.name.split(' ')[0]}</span>
+              <span>{(user.name || user.email || 'Account').split(' ')[0]}</span>
             </div>
           ) : (
             <Link to="/login" className="btn btn-outline btn-sm">
