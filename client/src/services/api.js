@@ -1,4 +1,15 @@
-const API_BASE_URL = '/api';
+const RENDER_API_URL = 'https://e-commerce-management-system-awev.onrender.com/api';
+
+const normalizeApiBase = (raw) => {
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_URL
+  ? normalizeApiBase(import.meta.env.VITE_API_URL)
+  : import.meta.env.PROD
+    ? RENDER_API_URL
+    : '/api';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('aura_token');
@@ -15,7 +26,10 @@ const handleResponse = async (response) => {
     : null;
 
   if (!response.ok) {
-    const errorMsg = data?.message || `Request failed with status ${response.status}`;
+    const errorMsg =
+      response.status === 429
+        ? 'Too many requests right now. Please wait a few seconds and try again.'
+        : data?.message || `Request failed with status ${response.status}`;
     throw new Error(errorMsg);
   }
 
@@ -26,179 +40,174 @@ const handleResponse = async (response) => {
   return data;
 };
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const apiFetch = async (path, options = {}, retriesLeft = 2) => {
+  const res = await fetch(`${API_BASE_URL}${path}`, options);
+  if (res.status === 429 && retriesLeft > 0) {
+    const retryAfterSec = Number(res.headers.get('retry-after'));
+    const waitMs =
+      Number.isFinite(retryAfterSec) && retryAfterSec > 0
+        ? Math.min(retryAfterSec * 1000, 5000)
+        : (3 - retriesLeft) * 1500;
+    await delay(waitMs);
+    return apiFetch(path, options, retriesLeft - 1);
+  }
+  return handleResponse(res);
+};
+
 export const authAPI = {
   login: async (email, password) => {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    return apiFetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    return handleResponse(res);
   },
 
   register: async (name, email, password) => {
-    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    return apiFetch('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
     });
-    return handleResponse(res);
   },
 
   getProfile: async () => {
-    const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+    return apiFetch('/auth/profile', {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 
   toggleWishlist: async (productId) => {
-    const res = await fetch(`${API_BASE_URL}/auth/wishlist/${productId}`, {
+    return apiFetch(`/auth/wishlist/${productId}`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 };
 
 export const productsAPI = {
   getAll: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE_URL}/products${queryString ? `?${queryString}` : ''}`);
-    return handleResponse(res);
+    return apiFetch(`/products${queryString ? `?${queryString}` : ''}`);
   },
 
   getById: async (id) => {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`);
-    return handleResponse(res);
+    return apiFetch(`/products/${id}`);
   },
 
   create: async (productData) => {
-    const res = await fetch(`${API_BASE_URL}/products`, {
+    return apiFetch('/products', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(productData),
     });
-    return handleResponse(res);
   },
 
   update: async (id, productData) => {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    return apiFetch(`/products/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(productData),
     });
-    return handleResponse(res);
   },
 
   delete: async (id) => {
-    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    return apiFetch(`/products/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 
   addReview: async (id, reviewData) => {
-    const res = await fetch(`${API_BASE_URL}/products/${id}/reviews`, {
+    return apiFetch(`/products/${id}/reviews`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(reviewData),
     });
-    return handleResponse(res);
   },
 };
 
 export const cartAPI = {
   getCart: async () => {
-    const res = await fetch(`${API_BASE_URL}/cart`, {
+    return apiFetch('/cart', {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 
   addToCart: async (productId, qty = 1) => {
-    const res = await fetch(`${API_BASE_URL}/cart`, {
+    return apiFetch('/cart', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ productId, qty }),
     });
-    return handleResponse(res);
   },
 
   updateQty: async (productId, qty) => {
-    const res = await fetch(`${API_BASE_URL}/cart/${productId}`, {
+    return apiFetch(`/cart/${productId}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ qty }),
     });
-    return handleResponse(res);
   },
 
   removeItem: async (productId) => {
-    const res = await fetch(`${API_BASE_URL}/cart/${productId}`, {
+    return apiFetch(`/cart/${productId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 
   clearCart: async () => {
-    const res = await fetch(`${API_BASE_URL}/cart`, {
+    return apiFetch('/cart', {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 };
 
 export const ordersAPI = {
   create: async (orderData) => {
-    const res = await fetch(`${API_BASE_URL}/orders`, {
+    return apiFetch('/orders', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(orderData),
     });
-    return handleResponse(res);
   },
 
   getMyOrders: async () => {
-    const res = await fetch(`${API_BASE_URL}/orders/myorders`, {
+    return apiFetch('/orders/myorders', {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 
   getById: async (id) => {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
+    return apiFetch(`/orders/${id}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 
   getAll: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE_URL}/orders${queryString ? `?${queryString}` : ''}`, {
+    return apiFetch(`/orders${queryString ? `?${queryString}` : ''}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 
   updateStatus: async (id, status) => {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
+    return apiFetch(`/orders/${id}/status`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ status }),
     });
-    return handleResponse(res);
   },
 };
 
 export const analyticsAPI = {
   getDashboard: async () => {
-    const res = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+    return apiFetch('/admin/dashboard', {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
   },
 };

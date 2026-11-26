@@ -61,7 +61,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (loading || !validate()) return;
 
     setLoading(true);
     setGeneralError('');
