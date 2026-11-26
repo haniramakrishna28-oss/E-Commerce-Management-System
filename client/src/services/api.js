@@ -1,15 +1,6 @@
-const RENDER_API_URL = 'https://e-commerce-management-system-awev.onrender.com/api';
-
-const normalizeApiBase = (raw) => {
-  const trimmed = raw.trim().replace(/\/+$/, '');
-  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_URL
-  ? normalizeApiBase(import.meta.env.VITE_API_URL)
-  : import.meta.env.PROD
-    ? RENDER_API_URL
-    : '/api';
+const API_BASE_URL = import.meta.env.PROD
+  ? 'https://e-commerce-management-system-awev.onrender.com/api'
+  : '/api';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('aura_token');
